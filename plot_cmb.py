@@ -117,5 +117,25 @@ def main() -> None:
         save_map(values, field_name, output_name, title, inpainted=inpainted)
 
 
+def inspect_fits_columns(path):
+    """Inspect temperature column metadata and scaling."""
+    with fits.open(path, memmap=True) as hdul:
+        for hdu in hdul:
+            if not isinstance(hdu, fits.BinTableHDU):
+                continue
+
+            print("\n=== FITS TEMPERATURE FIELD DIAGNOSTICS ===")
+            print("ORDERING:", hdu.header.get("ORDERING"))
+            print("NSIDE:", hdu.header.get("NSIDE"))
+
+            for col in hdu.columns:
+                if col.name.upper() in ("I_STOKES", "I_STOKES_INP"):
+                    print("\nColumn:", col.name)
+                    print("Unit:", col.unit)
+                    print("Format:", col.format)
+                    print("Scale:", col.bscale)
+                    print("Zero offset:", col.bzero)
+
 if __name__ == "__main__":
+    inspect_fits_columns(DATA_FILE)
     main()
