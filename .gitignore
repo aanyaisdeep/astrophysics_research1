@@ -1,0 +1,5 @@
+data/*.fits
+data/*.part
+outputs/*.png
+.venv/
+__pycache__/
