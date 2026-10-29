@@ -136,6 +136,32 @@ def inspect_fits_columns(path):
                     print("Scale:", col.bscale)
                     print("Zero offset:", col.bzero)
 
+def inspect_inpainted_values(path):
+    """Check the distribution of the inpainted field."""
+    column = find_map_column(path, "I_STOKES_INP")
+    values = hp.read_map(
+        str(path),
+        field=column,
+        nest=True,
+        dtype=np.float64
+    )
+
+    print("\n=== INPAINTED FIELD VALUE CHECK ===")
+
+    print("NaN pixels:", np.count_nonzero(np.isnan(values)))
+    print("Infinite pixels:", np.count_nonzero(np.isinf(values)))
+
+    for threshold in [0.001, 0.01, 0.1, 1, 10, 100]:
+        count = np.count_nonzero(
+            np.isfinite(values) & (np.abs(values) > threshold)
+        )
+        print(f"Pixels with |value| > {threshold} K: {count:,}")
+
+    finite = values[np.isfinite(values)]
+    print("Percentiles (K):")
+    print(np.percentile(finite, [0, 1, 25, 50, 75, 99, 100]))
+
 if __name__ == "__main__":
     inspect_fits_columns(DATA_FILE)
+    inspect_inpainted_values(DATA_FILE)
     main()
