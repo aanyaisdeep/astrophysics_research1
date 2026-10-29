@@ -1,0 +1,5 @@
+healpy
+astropy
+numpy
+matplotlib
+requests
