@@ -232,7 +232,7 @@ def make_eb_overlays(path: Path) -> None:
         fig.savefig(OUTPUT_DIR / filename, dpi=220, bbox_inches="tight")
         plt.close(fig)
         print(f"Saved: {OUTPUT_DIR / filename}")
-        def make_qu_sticks(path: Path) -> None:
+def make_qu_sticks(path: Path) -> None:
     """Overlay measured Q/U polarization directions on the CMB temperature map."""
     nside_out = 16  # Fewer, clearer sticks than one at every original pixel.
 
