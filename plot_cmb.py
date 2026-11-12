@@ -216,7 +216,7 @@ def make_eb_overlays(path: Path) -> None:
             fig=fig.number,
             nest=False,
             hold=True,
-            reuse_axes=True,
+            reuse_axes=False,
             title="",
             unit="",
             cmap="coolwarm",
