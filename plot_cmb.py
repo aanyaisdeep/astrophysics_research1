@@ -209,7 +209,7 @@ def make_eb_overlays(path: Path) -> None:
             cmap="gray",
             min=-COLOR_LIMIT_UK,
             max=COLOR_LIMIT_UK,
-            cbar=True,
+            cbar=False
         )
         hp.mollview(
             pattern * MICROKELVIN_PER_K,
