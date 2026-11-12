@@ -10,10 +10,10 @@ from astropy.io import fits
 
 URL = (
     "https://irsa.ipac.caltech.edu/data/Planck/release_3/all-sky-maps/"
-    "maps/component-maps/cmb/COM_CMB_IQU-smica-nosz_2048_R3.00_full.fits"
+    "maps/component-maps/cmb/COM_CMB_IQU-smica_2048_R3.00_full.fits"
 )
 DATA_DIR = Path(__file__).resolve().parent / "data"
-DESTINATION = DATA_DIR / "COM_CMB_IQU-smica-nosz_2048_R3.00_full.fits"
+DESTINATION = DATA_DIR / "COM_CMB_IQU-smica_2048_R3.00_full.fits"
 PARTIAL = DESTINATION.with_suffix(DESTINATION.suffix + ".part")
 CHUNK_SIZE = 1024 * 1024
 
