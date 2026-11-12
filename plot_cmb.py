@@ -223,7 +223,7 @@ def make_eb_overlays(path: Path) -> None:
             min=-COLOR_LIMIT_UK,
             max=COLOR_LIMIT_UK,
             cbar=False,
-            alpha=0.55,
+            alpha=np.full(pattern.size, 0.55),
         )
         fig.savefig(OUTPUT_DIR / filename, dpi=220, bbox_inches="tight")
         plt.close(fig)
