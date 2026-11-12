@@ -160,8 +160,76 @@ def inspect_inpainted_values(path):
     finite = values[np.isfinite(values)]
     print("Percentiles (K):")
     print(np.percentile(finite, [0, 1, 25, 50, 75, 99, 100]))
+def make_eb_overlays(path: Path) -> None:
+    """Make temperature plots with translucent E- and B-mode maps overlaid."""
+    if not path.exists():
+        raise FileNotFoundError(f"Planck FITS file not found: {path}")
 
+    nside = 2048
+    lmax = 1024  # Lower than full resolution to keep the transform manageable.
+
+    def load_filled_field(name: str) -> np.ndarray:
+        column = find_map_column(path, name)
+        values = hp.read_map(
+            str(path), field=column, nest=True, dtype=np.float64, verbose=False
+        )
+        invalid = (~np.isfinite(values)) | (values <= hp.UNSEEN / 2)
+        values[invalid] = 0.0
+        # map2alm expects RING ordering; the FITS fields are NESTED.
+        return hp.reorder(values, n2r=True)
+
+    # Use the inpainted fields so the transform has full-sky Q and U inputs.
+    temperature = load_filled_field("I_STOKES_INP")
+    q_map = load_filled_field("Q_STOKES_INP")
+    u_map = load_filled_field("U_STOKES_INP")
+
+    alm_t, alm_e, alm_b = hp.map2alm(
+        [temperature, q_map, u_map],
+        pol=True,
+        lmax=lmax,
+        iter=3,
+    )
+
+    e_map = hp.alm2map(alm_e, nside=nside, lmax=lmax)
+    b_map = hp.alm2map(alm_b, nside=nside, lmax=lmax)
+
+    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    for mode, pattern, filename in (
+        ("E-mode", e_map, "cmb_temperature_e_overlay.png"),
+        ("B-mode", b_map, "cmb_temperature_b_overlay.png"),
+    ):
+        fig = plt.figure(figsize=(12, 7))
+        hp.mollview(
+            temperature * MICROKELVIN_PER_K,
+            fig=fig.number,
+            nest=False,
+            coord="G",
+            title=f"CMB temperature with {mode} polarization pattern",
+            unit="Temperature anisotropy (µK)",
+            cmap="gray",
+            min=-COLOR_LIMIT_UK,
+            max=COLOR_LIMIT_UK,
+            cbar=True,
+        )
+        hp.mollview(
+            pattern * MICROKELVIN_PER_K,
+            fig=fig.number,
+            nest=False,
+            hold=True,
+            reuse_axes=True,
+            title="",
+            unit="",
+            cmap="coolwarm",
+            min=-COLOR_LIMIT_UK,
+            max=COLOR_LIMIT_UK,
+            cbar=False,
+            alpha=0.55,
+        )
+        fig.savefig(OUTPUT_DIR / filename, dpi=220, bbox_inches="tight")
+        plt.close(fig)
+        print(f"Saved: {OUTPUT_DIR / filename}")
 if __name__ == "__main__":
     inspect_fits_columns(DATA_FILE)
     inspect_inpainted_values(DATA_FILE)
     main()
+    make_eb_overlays(DATA_FILE)
