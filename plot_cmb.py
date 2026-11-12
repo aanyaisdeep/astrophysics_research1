@@ -198,33 +198,37 @@ def make_eb_overlays(path: Path) -> None:
         ("E-mode", e_map, "cmb_temperature_e_overlay.png"),
         ("B-mode", b_map, "cmb_temperature_b_overlay.png"),
     ):
-        fig = plt.figure(figsize=(12, 7))
-        hp.mollview(
-            temperature * MICROKELVIN_PER_K,
-            fig=fig.number,
-            nest=False,
-            coord="G",
-            title=f"CMB temperature with {mode} polarization pattern",
-            unit="Temperature anisotropy (µK)",
-            cmap="gray",
-            min=-COLOR_LIMIT_UK,
-            max=COLOR_LIMIT_UK,
-            cbar=False
+              temp_uk = temperature * MICROKELVIN_PER_K
+        overlay_uk = pattern * MICROKELVIN_PER_K
+        finite = overlay_uk[np.isfinite(overlay_uk)]
+        vmax = float(np.percentile(np.abs(finite), 99))
+
+        temp_proj = hp.mollview(
+            temp_uk, coord="G", nest=False, xsize=1200,
+            min=-COLOR_LIMIT_UK, max=COLOR_LIMIT_UK,
+            cmap="gray", cbar=False, return_projected_map=True,
         )
-        hp.mollview(
-            pattern * MICROKELVIN_PER_K,
-            fig=fig.number,
-            nest=False,
-            hold=True,
-            reuse_axes=False,
-            title="",
-            unit="",
-            cmap="coolwarm",
-            min=-COLOR_LIMIT_UK,
-            max=COLOR_LIMIT_UK,
-            cbar=False,
-            alpha=np.full(pattern.size, 0.55),
+        plt.close()
+
+        overlay_proj = hp.mollview(
+            overlay_uk, coord="G", nest=False, xsize=1200,
+            min=-vmax, max=vmax,
+            cmap="coolwarm", cbar=False, return_projected_map=True,
         )
+        plt.close()
+
+        fig, ax = plt.subplots(figsize=(12, 7))
+        ax.imshow(
+            temp_proj, origin="lower", cmap="gray",
+            vmin=-COLOR_LIMIT_UK, vmax=COLOR_LIMIT_UK,
+        )
+        overlay_image = ax.imshow(
+            overlay_proj, origin="lower", cmap="coolwarm",
+            vmin=-vmax, vmax=vmax, alpha=0.55,
+        )
+        ax.set_title(f"CMB temperature with {mode} polarization pattern")
+        ax.axis("off")
+        fig.colorbar(overlay_image, ax=ax, label=f"{mode} pattern (µK)")
         fig.savefig(OUTPUT_DIR / filename, dpi=220, bbox_inches="tight")
         plt.close(fig)
         print(f"Saved: {OUTPUT_DIR / filename}")
