@@ -232,8 +232,110 @@ def make_eb_overlays(path: Path) -> None:
         fig.savefig(OUTPUT_DIR / filename, dpi=220, bbox_inches="tight")
         plt.close(fig)
         print(f"Saved: {OUTPUT_DIR / filename}")
+        def make_qu_sticks(path: Path) -> None:
+    """Overlay measured Q/U polarization directions on the CMB temperature map."""
+    nside_out = 16  # Fewer, clearer sticks than one at every original pixel.
+
+    def read_field(name: str) -> np.ndarray:
+        column = find_map_column(path, name)
+        return hp.read_map(
+            str(path), field=column, nest=True, dtype=np.float64, verbose=False
+        )
+
+    temperature = read_field("I_STOKES")
+    q = read_field("Q_STOKES")
+    u = read_field("U_STOKES")
+
+    # Keep only pixels where all three measured fields are valid.
+    valid = (
+        np.isfinite(temperature) & (temperature > hp.UNSEEN / 2)
+        & np.isfinite(q) & (q > hp.UNSEEN / 2)
+        & np.isfinite(u) & (u > hp.UNSEEN / 2)
+    )
+
+    # Average Q and U together when reducing resolution; don't average angles.
+    weight = hp.ud_grade(
+        valid.astype(float), nside_out,
+        order_in="NESTED", order_out="RING",
+    )
+    q_low = hp.ud_grade(
+        np.where(valid, q, 0.0), nside_out,
+        order_in="NESTED", order_out="RING",
+    )
+    u_low = hp.ud_grade(
+        np.where(valid, u, 0.0), nside_out,
+        order_in="NESTED", order_out="RING",
+    )
+
+    usable = weight > 0.99
+    q_low[usable] /= weight[usable]
+    u_low[usable] /= weight[usable]
+
+    pixels = np.flatnonzero(usable)
+    lon_deg, lat_deg = hp.pix2ang(
+        nside_out, pixels, nest=False, lonlat=True
+    )
+    lon = np.radians(lon_deg)
+    lat = np.radians(lat_deg)
+
+    # Planck uses the HEALPix/COSMO polarization convention.
+    # This gives the angle measured from Galactic north toward east.
+    psi = -0.5 * np.arctan2(u_low[pixels], q_low[pixels])
+
+    # Make short line segments in each pixel's local sky tangent plane.
+    radius = np.radians(1.0)  # Half-length of each stick
+    r = np.column_stack((
+        np.cos(lat) * np.cos(lon),
+        np.cos(lat) * np.sin(lon),
+        np.sin(lat),
+    ))
+    north = np.column_stack((
+        -np.sin(lat) * np.cos(lon),
+        -np.sin(lat) * np.sin(lon),
+        np.cos(lat),
+    ))
+    east = np.column_stack((
+        -np.sin(lon),
+        np.cos(lon),
+        np.zeros_like(lon),
+    ))
+    direction = np.cos(psi)[:, None] * north + np.sin(psi)[:, None] * east
+
+    ends = np.stack((
+        np.cos(radius) * r - np.sin(radius) * direction,
+        np.cos(radius) * r + np.sin(radius) * direction,
+    ), axis=1)
+
+    # Convert each endpoint back to sky angles, then separate sticks with NaNs.
+    theta = np.arccos(np.clip(ends[..., 2], -1.0, 1.0))
+    phi = np.mod(np.arctan2(ends[..., 1], ends[..., 0]), 2 * np.pi)
+    theta_lines = np.column_stack((theta[:, 0], theta[:, 1], np.full(len(pixels), np.nan))).ravel()
+    phi_lines = np.column_stack((phi[:, 0], phi[:, 1], np.full(len(pixels), np.nan))).ravel()
+
+    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    fig = plt.figure(figsize=(12, 7))
+    hp.mollview(
+        hp.reorder(temperature, n2r=True) * MICROKELVIN_PER_K,
+        fig=fig.number,
+        coord="G",
+        title="Planck CMB temperature with Q/U polarization direction sticks",
+        unit="Temperature anisotropy (µK)",
+        cmap="coolwarm",
+        min=-COLOR_LIMIT_UK,
+        max=COLOR_LIMIT_UK,
+        cbar=True,
+    )
+    hp.projplot(theta_lines, phi_lines, color="black", linewidth=0.65)
+    fig.savefig(
+        OUTPUT_DIR / "cmb_temperature_qu_sticks.png",
+        dpi=220,
+        bbox_inches="tight",
+    )
+    plt.close(fig)
+    print(f"Saved: {OUTPUT_DIR / 'cmb_temperature_qu_sticks.png'}")
 if __name__ == "__main__":
     inspect_fits_columns(DATA_FILE)
     inspect_inpainted_values(DATA_FILE)
     main()
     make_eb_overlays(DATA_FILE)
+    make_qu_sticks(DATA_FILE)
