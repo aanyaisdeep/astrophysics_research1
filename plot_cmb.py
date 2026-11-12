@@ -9,7 +9,7 @@ import numpy as np
 from astropy.io import fits
 
 ROOT = Path(__file__).resolve().parent
-DATA_FILE = ROOT / "data" / "COM_CMB_IQU-smica-nosz_2048_R3.00_full.fits"
+DATA_FILE = ROOT / "data" / "COM_CMB_IQU-smica_2048_R3.00_full.fits"
 OUTPUT_DIR = ROOT / "outputs"
 MICROKELVIN_PER_K = 1e6
 COLOR_LIMIT_UK = 300.0
