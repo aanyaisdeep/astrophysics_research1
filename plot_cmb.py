@@ -234,7 +234,7 @@ def make_eb_overlays(path: Path) -> None:
         print(f"Saved: {OUTPUT_DIR / filename}")
 def make_qu_sticks(path: Path) -> None:
     """Overlay measured Q/U polarization directions on the CMB temperature map."""
-    nside_out = 16  # Fewer, clearer sticks than one at every original pixel.
+    nside_out = 8  # Keep a readable number of sticks for the full-sky plot.
 
     def read_field(name: str) -> np.ndarray:
         column = find_map_column(path, name)
@@ -306,11 +306,9 @@ def make_qu_sticks(path: Path) -> None:
         np.cos(radius) * r + np.sin(radius) * direction,
     ), axis=1)
 
-    # Convert each endpoint back to sky angles, then separate sticks with NaNs.
+    # Convert each endpoint back to sky angles.
     theta = np.arccos(np.clip(ends[..., 2], -1.0, 1.0))
     phi = np.mod(np.arctan2(ends[..., 1], ends[..., 0]), 2 * np.pi)
-    theta_lines = np.column_stack((theta[:, 0], theta[:, 1], np.full(len(pixels), np.nan))).ravel()
-    phi_lines = np.column_stack((phi[:, 0], phi[:, 1], np.full(len(pixels), np.nan))).ravel()
 
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     fig = plt.figure(figsize=(12, 7))
@@ -325,7 +323,13 @@ def make_qu_sticks(path: Path) -> None:
         max=COLOR_LIMIT_UK,
         cbar=True,
     )
-    hp.projplot(theta_lines, phi_lines, color="black", linewidth=0.65)
+    # Plot one segment at a time. The Mollweide seam is skipped to avoid
+    # drawing a long line across the whole map at longitude wraparound.
+    for i in range(len(pixels)):
+        if abs(phi[i, 1] - phi[i, 0]) < np.pi:
+            hp.projplot(
+                theta[i], phi[i], color="black", linewidth=0.7
+            )
     fig.savefig(
         OUTPUT_DIR / "cmb_temperature_qu_sticks.png",
         dpi=220,
