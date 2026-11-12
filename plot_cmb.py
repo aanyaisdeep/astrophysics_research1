@@ -198,7 +198,7 @@ def make_eb_overlays(path: Path) -> None:
         ("E-mode", e_map, "cmb_temperature_e_overlay.png"),
         ("B-mode", b_map, "cmb_temperature_b_overlay.png"),
     ):
-              temp_uk = temperature * MICROKELVIN_PER_K
+        temp_uk = temperature * MICROKELVIN_PER_K
         overlay_uk = pattern * MICROKELVIN_PER_K
         finite = overlay_uk[np.isfinite(overlay_uk)]
         vmax = float(np.percentile(np.abs(finite), 99))
